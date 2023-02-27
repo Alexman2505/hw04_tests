@@ -40,8 +40,9 @@ class PostCreateFormTests(TestCase):
             'group': PostCreateFormTests.group.id,
             'text': 'Тестовый текст',
         }
-        # делая post запрос автором мы как бы эмулируем нажатие кнопки на сайте "создать пост"
-        # и форма как будто бы заполняется соответсвующими значениями из словаря
+        # Делая post запрос автором мы эмулируем
+        # Нажатие кнопки на сайте "создать пост"
+        # И форма заполняется соответсвующими значениями из словаря
         response = self.authorized_client.post(
             reverse('posts:post_create'), data=form_data
         )

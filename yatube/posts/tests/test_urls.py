@@ -56,21 +56,25 @@ class PostURLTests(TestCase):
                 self.assertEqual(response.status_code, status_code)
 
     def test_post_edit_url_exist_on_authorized(self):
-        """Проверка доступности страницы /post/<int:post_id>/edit/ автору поста"""
+        """Проверка доступности страницы /post/<int:post_id>/edit/"""
         response = self.author_client.get(
             f'/posts/{PostURLTests.post.pk}/edit/'
         )
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_post_edit_url_redirect_authorized_on_post_detail(self):
-        """Проверка, что страница /post/<int:post_id>/edit/ перенаправит авторизованного пользователя (не автора) на страницу поста"""
+        """Проверка, что страница /post/<int:post_id>/edit/
+        перенаправит авторизованного пользователя (не автора) на страницу поста
+        """
         response = self.authorized_client.get(
             f'/posts/{PostURLTests.post.pk}/edit/', follow=True
         )
         self.assertRedirects(response, f'/posts/{PostURLTests.post.pk}/')
 
     def test_post_edit_url_redirect_guest_on_login(self):
-        """Страница /post/<int:post_id>/edit/ перенаправит неавторизованного пользователя на авторизацию"""
+        """Страница /post/<int:post_id>/edit/ перенаправит
+        неавторизованного пользователя на авторизацию
+        """
         response = self.guest_client.get(
             f'/posts/{PostURLTests.post.pk}/edit/', follow=True
         )
@@ -79,12 +83,16 @@ class PostURLTests(TestCase):
         )
 
     def test_post_create_url_redirect_guest_on_login(self):
-        """Страница /create/ перенаправит неавторизованного пользователя на авторизацию"""
+        """Страница /create/ перенаправит
+        неавторизованного пользователя на авторизацию
+        """
         response = self.guest_client.get('/create/', follow=True)
         self.assertRedirects(response, '/auth/login/?next=/create/')
 
     def test_post_create_url_exist_on_authorized(self):
-        """Проверка доступности страницы /create/ для авторизованного пользователя"""
+        """Проверка доступности страницы /create/
+        для авторизованного пользователя
+        """
         response = self.authorized_client.get('/create/')
         self.assertEqual(response.status_code, HTTPStatus.OK)
 

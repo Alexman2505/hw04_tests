@@ -82,8 +82,10 @@ class PostPagesTests(TestCase):
                 'posts:group_list', kwargs={'slug': PostPagesTests.group.slug}
             )
         )
-        # Проверяем, что в контексте страницы содержится ожидаемый список постов
-        # отфильтрованных по группе, т.е. два кварисета из БД соответствую друг другу
+        # Проверяем, что в контексте страницы содержится
+        # Ожидаемый список постов
+        # Отфильтрованных по группе, т.е. два кварисета из БД
+        # Соответствуют друг другу
         expected_posts = Post.objects.filter(group=PostPagesTests.group)
         posts_in_context = response.context['page_obj'].object_list
         self.assertQuerysetEqual(
@@ -98,8 +100,9 @@ class PostPagesTests(TestCase):
                 kwargs={'username': PostPagesTests.user_author},
             )
         )
-        # Проверяем, что в контексте страницы содержится ожидаемый список постов
-        # отфильтрованных по автору
+        # Проверяем, что в контексте страницы
+        # Содержится ожидаемый список постов
+        # Отфильтрованных по автору
         expected_posts = Post.objects.filter(author=PostPagesTests.post.author)
         posts_in_context = response.context['page_obj'].object_list
         self.assertQuerysetEqual(

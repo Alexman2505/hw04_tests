@@ -15,7 +15,7 @@ class StaticURLTests(TestCase):
         for address, status_code in status_code_url_names.items():
             with self.subTest(address=address):
                 response = self.guest_client.get(address)
-                self.assertEqual(response.status_code,status_code)
+                self.assertEqual(response.status_code, status_code)
 
     def test_url_uses_correct_template(self):
         """Проверка шаблонов статичных адресов."""
@@ -26,4 +26,4 @@ class StaticURLTests(TestCase):
         for address, template in templates_url_names.items():
             with self.subTest(address=address):
                 response = self.guest_client.get(address)
-                self.assertTemplateUsed(response,template)
+                self.assertTemplateUsed(response, template)
