@@ -119,7 +119,8 @@ class PostPagesTests(TestCase):
     def test_create_post_page_show_correct_context(self):
         """Тестируем шаблон создания поста"""
         response = self.author_client.get(reverse('posts:post_create'))
-        # Словарь ожидаемых типов полей формы:# указываем, объектами какого класса должны быть поля формы
+        # Словарь ожидаемых типов полей формы:# указываем,
+        # объектами какого класса должны быть поля формы
         for value, expected in self.form_fields.items():
             with self.subTest(value=value):
                 form_field = response.context.get('form').fields.get(value)
