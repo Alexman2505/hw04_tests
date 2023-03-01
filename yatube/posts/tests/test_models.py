@@ -1,9 +1,7 @@
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.test import TestCase
 
-from ..models import Group, Post
-
-User = get_user_model()
+from ..models import Group, Post, User
 
 
 class PostModelTest(TestCase):
@@ -29,9 +27,7 @@ class PostModelTest(TestCase):
         """Проверяем, что у моделей корректно работает __str__."""
         group_post = {
             str(PostModelTest.group): 'Тестовая группа',
-            str(
-                PostModelTest.post
-            ): 'Тестовый пост длина символов больше пятнадцати'[:15],
+            str(PostModelTest.post): self.post.text[: settings.SLICE_LETTERS],
         }
         for field, expected_value in group_post.items():
             with self.subTest(field=field):
