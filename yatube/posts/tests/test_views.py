@@ -1,11 +1,16 @@
+import shutil
+import tempfile
 from django import forms
-from django.test import Client, TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.conf import settings
 
 from posts.models import Group, Post, User
 
+TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostPagesTests(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -18,64 +23,54 @@ class PostPagesTests(TestCase):
             slug="Test_slag",
             description="Тестовое описание",
         )
+        small_gif = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
+        uploaded = SimpleUploadedFile(
+            name='small.gif',
+            content=small_gif,
+            content_type='image/gif'
+        )
         # Создаем тестовый пост с группой
         cls.post = Post.objects.create(
-            text="Тестовый пост", author=cls.user_author, group=cls.group
+            text="Тестовый пост",
+            author=cls.user_author,
+            group=cls.group,
+            image=uploaded
         )
         # Создаем тестовый пост, но без группы
         cls.post_1 = Post.objects.create(
             text='Пост без группы',
             author=cls.user_author,
+            image=uploaded
             # group=cls.group
         )
         # Создаем еще один тестовый пост с группой
         cls.post_2 = Post.objects.create(
-            text='Еще один пост', author=cls.user_author, group=cls.group
+            text='Еще один пост',
+            author=cls.user_author,
+            group=cls.group,
+            image=uploaded
         )
         cls.templates_guest = (
-            (
-                reverse('posts:index'),
-                'posts/index.html',
-                Post.objects.select_related('group', 'author'),
-            ),
-            (
-                reverse(
-                    'posts:group_list',
-                    kwargs={'slug': PostPagesTests.group.slug},
-                ),
-                'posts/group_list.html',
-                Post.objects.filter(group=PostPagesTests.group),
-            ),
-            (
-                reverse(
-                    'posts:profile',
-                    kwargs={'username': PostPagesTests.user_author},
-                ),
-                'posts/profile.html',
-                Post.objects.filter(author=PostPagesTests.post.author),
-            ),
-            (
-                reverse(
-                    'posts:post_detail',
-                    kwargs={'post_id': PostPagesTests.post.pk},
-                ),
-                'posts/post_detail.html',
-                Post.objects.filter(pk=PostPagesTests.post.pk),
-            ),
+            (reverse('posts:index'),'posts/index.html',Post.objects.select_related('group', 'author'),),
+            (reverse('posts:group_list',kwargs={'slug': PostPagesTests.group.slug},),'posts/group_list.html',Post.objects.filter(group=PostPagesTests.group),),
+            (reverse('posts:profile',kwargs={'username': PostPagesTests.user_author},),'posts/profile.html',Post.objects.filter(author=PostPagesTests.post.author),),
+            (reverse('posts:post_detail',kwargs={'post_id': PostPagesTests.post.pk},),'posts/post_detail.html',Post.objects.filter(pk=PostPagesTests.post.pk),),
         )
         cls.templates_author = (
             (reverse('posts:post_create'), 'posts/create_post.html'),
-            (
-                reverse(
-                    'posts:post_edit',
-                    kwargs={'post_id': PostPagesTests.post.pk},
-                ),
-                'posts/create_post.html',
-            ),
+            (reverse('posts:post_edit',kwargs={'post_id': PostPagesTests.post.pk},),'posts/create_post.html',),
         )
         cls.form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField,
+            'image': forms.fields.ImageField,
         }
         # Создаём неавторизованный клиент
         cls.guest_client = Client()
@@ -83,18 +78,27 @@ class PostPagesTests(TestCase):
         cls.author_client = Client()
         cls.author_client.force_login(PostPagesTests.user_author)
 
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
+
+
     def test_views_guest_client(self):
         """Тестируем адреса для гостя"""
         for name, template, filt in self.templates_guest:
-            with self.subTest(name=name, template=template, filt=filt):
-                response = self.guest_client.get(name)
-                self.assertQuerysetEqual(
-                    response.context['page_obj']
-                    if 'page_obj' in response.context
-                    else [response.context['post']],
-                    filt,
-                    transform=lambda x: x,
-                )
+            for value, expected in self.form_fields.items():
+                with self.subTest(name=name, template=template, filt=filt):
+                    response = self.guest_client.get(name)
+                    # form_field = response.context.get('form').fields.get(value)
+                    # self.assertIsInstance(form_field, expected)
+                    self.assertQuerysetEqual(
+                        response.context['page_obj']
+                        if 'page_obj' in response.context
+                        else [response.context['post']],
+                        filt,
+                        transform=lambda x: x,
+                    )
 
     def test_views_author_client(self):
         """Тестируем адреса для автора"""
@@ -119,7 +123,7 @@ class PostPagesTests(TestCase):
     def test_create_post_page_show_correct_context(self):
         """Тестируем шаблон создания поста"""
         response = self.author_client.get(reverse('posts:post_create'))
-        # Словарь ожидаемых типов полей формы:# указываем,
+        # Словарь ожидаемых типов полей формы указываем,
         # объектами какого класса должны быть поля формы
         for value, expected in self.form_fields.items():
             with self.subTest(value=value):

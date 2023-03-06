@@ -23,7 +23,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '(9)ma_9eofnb!=x#c1zhc&5qyca%nrk_ceapz(k24_=z9w!xr2'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+# DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
     'localhost',
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'core.apps.CoreConfig',
     'about.apps.AboutConfig',
+    'sorl.thumbnail',
 ]
 
 MIDDLEWARE = [
@@ -115,13 +117,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
 LANGUAGE_CODE = 'ru-ru'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
 
 
@@ -130,15 +128,18 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-NUMBER_OF_POSTS: int = 10
-NUMBER_OF_POSTS_PAGE_TWO: int = 3
-LOGIN_URL = 'users:login'
-LOGIN_REDIRECT_URL = 'posts:index'
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+LOGIN_URL = 'users:login'
+LOGIN_REDIRECT_URL = 'posts:index'
+# LOGOUT_REDIRECT_URL = 'users:logout'
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
-POST_CREATE = 5
-POST_EDIT = 6
-POST_DETAIL = 3
-POST_URL = 0
-SLICE_LETTERS = 15
+NUMBER_OF_POSTS: int = 10
+NUMBER_OF_POSTS_PAGE_TWO: int = 3
+POST_CREATE: int = 5
+POST_EDIT: int = 6
+POST_DETAIL: int = 3
+POST_URL: int = 0
+SLICE_LETTERS: int = 15

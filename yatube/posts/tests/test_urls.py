@@ -62,45 +62,51 @@ class PostURLTests(TestCase):
             ),
         )
 
-    def test_all(self):
-        """Тесты для всех. И пусть никто не уйдет обиженный"""
+    def test_url_for_guest_client(self):
+        """Проверяем доступные адреса для клиента."""
         for url, template, status in self.URLS_ALL_STARS:
             with self.subTest(url=url, template=template, status=status):
-                for client in [
-                    self.guest_client,
-                    self.authorized_client,
-                    self.author_client,
-                ]:
-                    response = client.get(url)
-                    if (
-                        client == self.guest_client
-                        and url
-                        == self.URLS_ALL_STARS[settings.POST_CREATE][
+                response = self.guest_client.get(url)
+                if (
+                    url
+                    == self.URLS_ALL_STARS[settings.POST_CREATE][
+                        settings.POST_URL
+                    ]
+                    or url
+                    == self.URLS_ALL_STARS[settings.POST_EDIT][
+                        settings.POST_URL
+                    ]
+                ):
+                    self.assertRedirects(response, '/auth/login/?next=' + url)
+                else:
+                    self.assertTemplateUsed(response, template)
+                    self.assertEqual(response.status_code, status)
+
+    def test_url_for_authorized_client(self):
+        """Проверяем доступные адреса для авторизованного пользователя."""
+        for url, template, status in self.URLS_ALL_STARS:
+            with self.subTest(url=url, template=template, status=status):
+                response = self.authorized_client.get(url)
+                if (
+                    url
+                    == self.URLS_ALL_STARS[settings.POST_EDIT][
+                        settings.POST_URL
+                    ]
+                ):
+                    self.assertRedirects(
+                        response,
+                        self.URLS_ALL_STARS[settings.POST_DETAIL][
                             settings.POST_URL
-                        ]
-                    ) or (
-                        client == self.guest_client
-                        and url
-                        == self.URLS_ALL_STARS[settings.POST_EDIT][
-                            settings.POST_URL
-                        ]
-                    ):
-                        self.assertRedirects(
-                            response, '/auth/login/?next=' + url
-                        )
-                    elif (
-                        client == self.authorized_client
-                        and url
-                        == self.URLS_ALL_STARS[settings.POST_EDIT][
-                            settings.POST_URL
-                        ]
-                    ):
-                        self.assertRedirects(
-                            response,
-                            self.URLS_ALL_STARS[settings.POST_DETAIL][
-                                settings.POST_URL
-                            ],
-                        )
-                    else:
-                        self.assertTemplateUsed(response, template)
-                        self.assertEqual(response.status_code, status)
+                        ],
+                    )
+                else:
+                    self.assertTemplateUsed(response, template)
+                    self.assertEqual(response.status_code, status)
+
+    def test_url_for_author_client(self):
+        """Проверяем доступные адреса для автора поста."""
+        for url, template, status in self.URLS_ALL_STARS:
+            with self.subTest(url=url, template=template, status=status):
+                response = self.author_client.get(url)
+                self.assertTemplateUsed(response, template)
+                self.assertEqual(response.status_code, status)
