@@ -24,18 +24,19 @@ class PostCreateFormTests(TestCase):
             description='Тестовое описание',
         )
         small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x02\x00'
-            b'\x01\x00\x80\x00\x00\x00\x00\x00'
-            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-            b'\x0A\x00\x3B'
+             b'\x47\x49\x46\x38\x39\x61\x02\x00'
+             b'\x01\x00\x80\x00\x00\x00\x00\x00'
+             b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+             b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+             b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+             b'\x0A\x00\x3B'
         )
         uploaded = SimpleUploadedFile(
             name='small.gif',
             content=small_gif,
             content_type='image/gif'
         )
+        # print(vars(uploaded))
         cls.post = Post.objects.create(
             author=cls.user,
             text='Первый тестовый пост',
@@ -45,9 +46,8 @@ class PostCreateFormTests(TestCase):
         cls.form_data = {
             'group': PostCreateFormTests.group.id,
             'text': 'Тестовый текст',
-            'image': small_gif,
+            'image': uploaded,
         }
-
         cls.guest_client = Client()
         cls.authorized_client = Client()
         cls.authorized_client.force_login(PostCreateFormTests.user)
@@ -62,7 +62,6 @@ class PostCreateFormTests(TestCase):
         авторизованным пользователем.
         """
         self.post_count = Post.objects.count()
-        print(self.post_count)
         clients = [self.guest_client, self.authorized_client]
         expected_post_count = [self.post_count, self.post_count + 1]
         for i in range(len(clients)):
@@ -72,6 +71,8 @@ class PostCreateFormTests(TestCase):
                 response = client.post(
                     reverse('posts:post_create'), data=self.form_data
                 )
+                # print(vars(response))
+                # print(self.form_data['image'])
                 if client == self.guest_client:
                     self.assertRedirects(
                         response, '/auth/login/?next=/create/'
@@ -96,7 +97,7 @@ class PostCreateFormTests(TestCase):
                             author=self.user,
                             group=self.group,
                             text=self.form_data['text'],
-                            image=self.form_data['image'],
+                            image='posts/small_gif'
                         ).exists()
                     )
                 self.assertEqual(Post.objects.count(), count)
