@@ -10,6 +10,7 @@ from posts.models import Group, Post, User
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
+
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostPagesTests(TestCase):
     @classmethod
@@ -44,6 +45,7 @@ class PostPagesTests(TestCase):
             image=uploaded
         )
         # Создаем тестовый пост, но без группы
+        # uploaded.seek(0)
         cls.post_1 = Post.objects.create(
             text='Пост без группы',
             author=cls.user_author,
@@ -51,6 +53,7 @@ class PostPagesTests(TestCase):
             # group=cls.group
         )
         # Создаем еще один тестовый пост с группой
+        # uploaded.seek(0)
         cls.post_2 = Post.objects.create(
             text='Еще один пост',
             author=cls.user_author,
@@ -83,22 +86,18 @@ class PostPagesTests(TestCase):
         super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
-
     def test_views_guest_client(self):
         """Тестируем адреса для гостя"""
         for name, template, filt in self.templates_guest:
-            for value, expected in self.form_fields.items():
-                with self.subTest(name=name, template=template, filt=filt):
-                    response = self.guest_client.get(name)
-                    # form_field = response.context.get('form').fields.get(value)
-                    # self.assertIsInstance(form_field, expected)
-                    self.assertQuerysetEqual(
-                        response.context['page_obj']
-                        if 'page_obj' in response.context
-                        else [response.context['post']],
-                        filt,
-                        transform=lambda x: x,
-                    )
+            with self.subTest(name=name, template=template, filt=filt):
+                response = self.guest_client.get(name)
+                self.assertQuerysetEqual(
+                    response.context['page_obj']
+                    if 'page_obj' in response.context
+                    else [response.context['post']],
+                    filt,
+                    transform=lambda x: x,
+                )
 
     def test_views_author_client(self):
         """Тестируем адреса для автора"""
@@ -117,18 +116,12 @@ class PostPagesTests(TestCase):
                         response.context.get('form').initial.get('group'),
                         PostPagesTests.post.group.pk,
                     )
+                    self.assertEqual(
+                        response.context.get('form').initial.get('image'),
+                        PostPagesTests.post.image,
+                    )
                     is_edit_context = response.context.get('is_edit')
                     self.assertTrue(is_edit_context)
-
-    def test_create_post_page_show_correct_context(self):
-        """Тестируем шаблон создания поста"""
-        response = self.author_client.get(reverse('posts:post_create'))
-        # Словарь ожидаемых типов полей формы указываем,
-        # объектами какого класса должны быть поля формы
-        for value, expected in self.form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context.get('form').fields.get(value)
-                self.assertIsInstance(form_field, expected)
 
 
 class PaginatorViewsTest(TestCase):

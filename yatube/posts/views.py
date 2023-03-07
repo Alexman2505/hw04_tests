@@ -11,7 +11,6 @@ from .utils import make_page
 def post_create(request):
     if request.method == "POST":
         form = PostForm(request.POST, files=request.FILES or None)
-        print(form.errors)
         if form.is_valid():
             post = form.save(commit=False)
             post.author = request.user
