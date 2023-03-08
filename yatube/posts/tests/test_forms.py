@@ -17,7 +17,6 @@ class PostCreateFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.post_count = Post.objects.count()
         cls.user = User.objects.create_user(username='auth')
         cls.group = Group.objects.create(
             title='Тестовая группа',
@@ -42,6 +41,7 @@ class PostCreateFormTests(TestCase):
             'text': 'Тестовый текст',
             'image': uploaded,
         }
+        cls.post_count = Post.objects.count()
         cls.guest_client = Client()
         cls.authorized_client = Client()
         cls.authorized_client.force_login(PostCreateFormTests.user)
