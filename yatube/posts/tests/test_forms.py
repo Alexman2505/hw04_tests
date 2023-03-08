@@ -71,7 +71,7 @@ class PostCreateFormTests(TestCase):
         )
         self.assertEqual(Post.objects.count(), self.post_count+1)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
-        post = Post.objects.latest('id')
+        # post = Post.objects.latest('id')
         # self.assertEqual(post.text,form_data['text'])
         # self.assertEqual(post.group.id,form_data['group'])
         # self.assertEqual(post.image.name,f"posts/{form_data['image'].name}")
@@ -106,14 +106,15 @@ class PostCreateFormTests(TestCase):
                 image=f"posts/{form_data['image'].name}",
             ).exists()
         )
-        # POST.OBJECT ALL DELIT
         self.assertEqual(Post.objects.count(), self.post_count)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
     def test_add_comment_authorized_client(self):
-        """После проверки формы комментарий добавляется в пост"""
+        """После проверки формы комментарий
+        авторизованного добавляется в пост
+        """
         form_data = {
-            'text': 'Комментарий',
+            'text': 'Комментарий авторизованного',
         }
         comment_count = Comment.objects.count()
         response = self.authorized_client.post(
@@ -127,9 +128,31 @@ class PostCreateFormTests(TestCase):
                              'post_id': PostCreateFormTests.post.id}))
         self.assertTrue(
             Comment.objects.filter(
-                text='Комментарий'
+                text=form_data['text']
             ).exists())
         self.assertEqual(Comment.objects.count(), comment_count+1)
+
+    def test_add_comment_guest_client(self):
+        """После проверки формы комментарий
+        гостя НЕ добавляется в пост
+        """
+        form_data = {
+            'text': 'Комментарий гостя',
+        }
+        comment_count = Comment.objects.count()
+        response = self.guest_client.post(
+            reverse(
+                'posts:add_comment',
+                kwargs={'post_id': self.post.id}
+            ),
+            data=form_data, follow=True
+        )
+        self.assertRedirects(response, '/auth/login/?next=/posts/1/comment/')
+        self.assertFalse(
+            Comment.objects.filter(
+                text=form_data['text']
+            ).exists())
+        self.assertEqual(Comment.objects.count(), comment_count)
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostEditFormTests(TestCase):
@@ -205,8 +228,8 @@ class PostEditFormTests(TestCase):
         data_for_equal = (
             (Post.objects.count(), posts_count),
             (response.status_code, HTTPStatus.OK),
-            (PostEditFormTests.post.text, self.form_data['text']),
-            (PostEditFormTests.post.group.id, self.form_data['group']),
+            (self.post.text, self.form_data['text']),
+            (self.post.group.id, self.form_data['group']),
             (self.post.image.name,f"posts/{self.form_data['image'].name}"),
         )
         for value, expected in data_for_equal:
