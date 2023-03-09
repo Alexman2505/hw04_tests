@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.test import TestCase
 
-from ..models import Group, Post, User
+from ..models import Comment, Group, Post, User
 
 
 class PostModelTest(TestCase):
@@ -9,7 +9,7 @@ class PostModelTest(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         # Создаем тестового пользователя
-        cls.user = User.objects.create_user(username='username')
+        cls.author = User.objects.create_user(username='author')
         # Создаем тестовую группу
         cls.group = Group.objects.create(
             title='Тестовая группа',
@@ -18,16 +18,23 @@ class PostModelTest(TestCase):
         )
         # Создаем тестовый пост
         cls.post = Post.objects.create(
-            author=cls.user,
+            author=cls.author,
             text='Тестовый пост длина символов больше пятнадцати',
             group=cls.group,
+        )
+        #Создаем комментарий
+        cls.comment = Comment.objects.create(
+            post=cls.post,
+            author=cls.author,
+            text='это комментарий'
         )
 
     def test_models_have_correct_object_names(self):
         """Проверяем, что у моделей корректно работает __str__."""
         group_post = {
-            str(PostModelTest.group): 'Тестовая группа',
-            str(PostModelTest.post): self.post.text[: settings.SLICE_LETTERS],
+            str(self.group): 'Тестовая группа',
+            str(self.post): self.post.text[: settings.SLICE_LETTERS],
+            str(self.comment): 'это комментарий'
         }
         for field, expected_value in group_post.items():
             with self.subTest(field=field):
@@ -35,7 +42,7 @@ class PostModelTest(TestCase):
 
     def test_verbose_name(self):
         """verbose_name в полях совпадает с ожидаемым."""
-        post = PostModelTest.post
+        post = self.post
         field_verboses = {
             'text': 'Текст поста',
             'group': 'Группа',
@@ -49,7 +56,7 @@ class PostModelTest(TestCase):
 
     def test_help_text(self):
         """help_text в полях совпадает с ожидаемым."""
-        post = PostModelTest.post
+        post = self.post
         field_help_texts = {
             'text': 'Текст нового поста',
             'group': 'Группа, к которой будет относиться пост',

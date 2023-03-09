@@ -2,11 +2,12 @@ import shutil
 import tempfile
 from django import forms
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.conf import settings
 
-from posts.models import Group, Post, User
+from posts.models import Comment, Group, Post, User
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -17,7 +18,7 @@ class PostPagesTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         # Создаем тестового пользователя-автора
-        cls.user_author = User.objects.create_user(username='Author')
+        cls.author = User.objects.create_user(username='Author')
         # Создаем тестовую группу
         cls.group = Group.objects.create(
             title="Тестовая группа",
@@ -40,7 +41,7 @@ class PostPagesTests(TestCase):
         # Создаем тестовый пост с группой
         cls.post = Post.objects.create(
             text="Тестовый пост",
-            author=cls.user_author,
+            author=cls.author,
             group=cls.group,
             image=uploaded
         )
@@ -48,7 +49,7 @@ class PostPagesTests(TestCase):
         # uploaded.seek(0)
         cls.post_1 = Post.objects.create(
             text='Пост без группы',
-            author=cls.user_author,
+            author=cls.author,
             image=uploaded
             # group=cls.group
         )
@@ -56,14 +57,19 @@ class PostPagesTests(TestCase):
         # uploaded.seek(0)
         cls.post_2 = Post.objects.create(
             text='Еще один пост',
-            author=cls.user_author,
+            author=cls.author,
             group=cls.group,
             image=uploaded
+        )
+        cls.comment = Comment.objects.create(
+            post=cls.post,
+            author=cls.author,
+            text='это комментарий'
         )
         cls.templates_guest = (
             (reverse('posts:index'),'posts/index.html',Post.objects.select_related('group', 'author'),),
             (reverse('posts:group_list',kwargs={'slug': PostPagesTests.group.slug},),'posts/group_list.html',Post.objects.filter(group=PostPagesTests.group),),
-            (reverse('posts:profile',kwargs={'username': PostPagesTests.user_author},),'posts/profile.html',Post.objects.filter(author=PostPagesTests.post.author),),
+            (reverse('posts:profile',kwargs={'username': PostPagesTests.author},),'posts/profile.html',Post.objects.filter(author=PostPagesTests.post.author),),
             (reverse('posts:post_detail',kwargs={'post_id': PostPagesTests.post.pk},),'posts/post_detail.html',Post.objects.filter(pk=PostPagesTests.post.pk),),
         )
         cls.templates_author = (
@@ -79,7 +85,7 @@ class PostPagesTests(TestCase):
         cls.guest_client = Client()
         # Создаём клиент для авторизации тестовым пользователем-автором
         cls.author_client = Client()
-        cls.author_client.force_login(PostPagesTests.user_author)
+        cls.author_client.force_login(cls.author)
 
     @classmethod
     def tearDownClass(cls):
@@ -88,6 +94,7 @@ class PostPagesTests(TestCase):
 
     def test_views_guest_client(self):
         """Тестируем адреса для гостя"""
+        cache.clear()
         for name, template, filt in self.templates_guest:
             with self.subTest(name=name, template=template, filt=filt):
                 response = self.guest_client.get(name)
@@ -101,6 +108,7 @@ class PostPagesTests(TestCase):
 
     def test_views_author_client(self):
         """Тестируем адреса для автора"""
+        cache.clear()
         for name, template in self.templates_author:
             for value, expected in self.form_fields.items():
                 with self.subTest(name=name, template=template):
@@ -110,25 +118,43 @@ class PostPagesTests(TestCase):
                 if name in 'edit':
                     self.assertEqual(
                         response.context.get('form').initial.get('text'),
-                        PostPagesTests.post.text,
+                        self.post.text,
                     )
                     self.assertEqual(
                         response.context.get('form').initial.get('group'),
-                        PostPagesTests.post.group.pk,
+                        self.post.group.pk,
                     )
                     self.assertEqual(
                         response.context.get('form').initial.get('image'),
-                        PostPagesTests.post.image,
+                        self.post.image,
                     )
                     is_edit_context = response.context.get('is_edit')
                     self.assertTrue(is_edit_context)
+
+    def test_comments_in_post_detail(self):
+        """Проверка доступности комментария"""
+        response = self.guest_client.get(reverse('posts:post_detail',
+                                        kwargs ={'post_id':self.post.id})
+                                        )
+        self.assertIn('comments',response.context)
+
+    def test_cache_index(self):
+        '''Проверка кеша главной страницы'''
+        cache.clear()
+        response_1 = self.guest_client.get(reverse('posts:index'))
+        Post.objects.all().delete()
+        response_2 = self.guest_client.get(reverse('posts:index'))
+        self.assertEqual(response_1.content,response_2.content)
+        cache.clear()
+        response_3 = self.guest_client.get(reverse('posts:index'))
+        self.assertNotEqual(response_1.content,response_3.content)
 
 
 class PaginatorViewsTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user_author = User.objects.create_user(username='Author')
+        cls.author = User.objects.create_user(username='Author')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -140,7 +166,7 @@ class PaginatorViewsTest(TestCase):
         ):
             list_objs.append(
                 Post.objects.create(
-                    author=cls.user_author,
+                    author=cls.author,
                     text=f'Тест пост #{i+1}',
                     group=cls.group,
                 )
@@ -160,7 +186,7 @@ class PaginatorViewsTest(TestCase):
             (
                 reverse(
                     'posts:profile',
-                    kwargs={'username': PaginatorViewsTest.user_author},
+                    kwargs={'username': PaginatorViewsTest.author},
                 ),
                 (settings.NUMBER_OF_POSTS, settings.NUMBER_OF_POSTS_PAGE_TWO),
             ),
@@ -168,6 +194,7 @@ class PaginatorViewsTest(TestCase):
 
     def test_pagination(self):
         '''Тестируем паджинатор'''
+        cache.clear()
         for url, page_count in self.pages:
             with self.subTest(url=url):
                 response = self.client.get(url)

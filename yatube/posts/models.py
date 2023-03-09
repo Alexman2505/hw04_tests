@@ -19,7 +19,7 @@ class Post(models.Model):
     text = models.TextField(
         help_text="Текст нового поста", verbose_name="Текст поста"
     )
-    pub_date = models.DateTimeField(auto_now_add=True)
+    pub_date = models.DateTimeField(auto_now_add=True, db_index=True)
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='posts'
     )
@@ -62,3 +62,6 @@ class Comment(models.Model):
     )
     class Meta:
         ordering = ['-created']
+
+    def __str__(self) -> str:
+        return self.text

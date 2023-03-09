@@ -135,11 +135,19 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 LOGIN_URL = 'users:login'
 LOGIN_REDIRECT_URL = 'posts:index'
 # LOGOUT_REDIRECT_URL = 'users:logout'
-CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
+CSRF_FAILURE_VIEW = 'core.views.page_not_found'
+PAGE_NOT_FOUND_VIEW = 'core.views.csrf_failure'
 NUMBER_OF_POSTS: int = 10
 NUMBER_OF_POSTS_PAGE_TWO: int = 3
 POST_CREATE: int = 5
 POST_EDIT: int = 6
 POST_DETAIL: int = 3
+POST_COMMENT: int = 7
 POST_URL: int = 0
 SLICE_LETTERS: int = 15
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}

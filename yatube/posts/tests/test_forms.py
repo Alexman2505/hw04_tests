@@ -17,7 +17,7 @@ class PostCreateFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='auth')
+        cls.user = User.objects.create_user(username='author')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -39,7 +39,7 @@ class PostCreateFormTests(TestCase):
         cls.post_count = Post.objects.count()
         cls.guest_client = Client()
         cls.authorized_client = Client()
-        cls.authorized_client.force_login(PostCreateFormTests.user)
+        cls.authorized_client.force_login(cls.user)
 
     @classmethod
     def tearDownClass(cls):
@@ -91,7 +91,7 @@ class PostCreateFormTests(TestCase):
             content_type='image/gif'
         )
         form_data = {
-            'group': PostCreateFormTests.group.id,
+            'group': self.group.id,
             'text': 'Формы текст',
             'image': uploaded
         }
@@ -125,7 +125,7 @@ class PostCreateFormTests(TestCase):
             data=form_data, follow=True
         )
         self.assertRedirects(response, reverse('posts:post_detail', kwargs={
-                             'post_id': PostCreateFormTests.post.id}))
+                             'post_id': self.post.id}))
         self.assertTrue(
             Comment.objects.filter(
                 text=form_data['text']
@@ -147,19 +147,21 @@ class PostCreateFormTests(TestCase):
             ),
             data=form_data, follow=True
         )
-        self.assertRedirects(response, '/auth/login/?next=/posts/1/comment/')
+        self.assertRedirects(response, '/auth/login/?next=/posts/'
+                                        f'{self.post.id}/comment/')
         self.assertFalse(
             Comment.objects.filter(
                 text=form_data['text']
             ).exists())
         self.assertEqual(Comment.objects.count(), comment_count)
 
+
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostEditFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='auth')
+        cls.user = User.objects.create_user(username='author')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -202,11 +204,11 @@ class PostEditFormTests(TestCase):
         )
         cls.form_data = {
             'text': 'Отредактированный пост',
-            'group': PostEditFormTests.new_group.id,
+            'group': cls.new_group.id,
             'image': new_uploaded,
         }
         cls.authorized_client = Client()
-        cls.authorized_client.force_login(PostEditFormTests.user)
+        cls.authorized_client.force_login(cls.user)
 
     @classmethod
     def tearDownClass(cls):
@@ -219,12 +221,12 @@ class PostEditFormTests(TestCase):
         response = self.authorized_client.post(
             reverse(
                 'posts:post_edit',
-                kwargs={'post_id': PostEditFormTests.post.id},
+                kwargs={'post_id': self.post.id},
             ),
             data=self.form_data,
             follow=True,
         )
-        PostEditFormTests.post.refresh_from_db()
+        self.post.refresh_from_db()
         data_for_equal = (
             (Post.objects.count(), posts_count),
             (response.status_code, HTTPStatus.OK),
@@ -239,6 +241,6 @@ class PostEditFormTests(TestCase):
             response,
             reverse(
                 'posts:post_detail',
-                kwargs={'post_id': PostEditFormTests.post.id},
+                kwargs={'post_id': self.post.id},
             ),
         )

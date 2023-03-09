@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 from django.conf import settings
+from django.core.cache import cache
 from django.test import Client, TestCase
 
 from posts.models import Group, Post, User
@@ -60,10 +61,16 @@ class PostURLTests(TestCase):
                 'posts/create_post.html',
                 HTTPStatus.OK,
             ),
+            # (
+            #     f'/posts/{cls.post.pk}/comment',
+            #     'posts/post_detail.html',
+            #     HTTPStatus.OK,
+            # ),
         )
 
     def test_url_for_guest_client(self):
         """Проверяем доступные адреса для клиента."""
+        cache.clear()
         for url, template, status in self.URLS_ALL_STARS:
             with self.subTest(url=url, template=template, status=status):
                 response = self.guest_client.get(url)
@@ -76,6 +83,10 @@ class PostURLTests(TestCase):
                     == self.URLS_ALL_STARS[settings.POST_EDIT][
                         settings.POST_URL
                     ]
+                    # or url
+                    # == self.URLS_ALL_STARS[settings.POST_COMMENT][
+                    #     settings.POST_URL
+                    # ]
                 ):
                     self.assertRedirects(response, '/auth/login/?next=' + url)
                 else:
@@ -84,6 +95,7 @@ class PostURLTests(TestCase):
 
     def test_url_for_authorized_client(self):
         """Проверяем доступные адреса для авторизованного пользователя."""
+        cache.clear()
         for url, template, status in self.URLS_ALL_STARS:
             with self.subTest(url=url, template=template, status=status):
                 response = self.authorized_client.get(url)
